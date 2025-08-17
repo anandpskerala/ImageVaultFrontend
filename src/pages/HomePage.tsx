@@ -22,7 +22,6 @@ import {
 	DragOverlay,
 	type DragStartEvent,
 } from '@dnd-kit/core';
-
 import {
 	arrayMove,
 	SortableContext,
@@ -30,14 +29,12 @@ import {
 	verticalListSortingStrategy,
 	rectSortingStrategy,
 } from '@dnd-kit/sortable';
-
 import { LoadingSkeleton } from '@/components/misc/LoadingSkeleton';
 import { SortableImageCard } from '@/components/misc/SortableImageCard';
 import { SortableImageListItem } from '@/components/misc/SortableImageListItem';
 import { useNavigate } from 'react-router-dom';
-
-
-
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 const HomePage = () => {
 	const { user } = useAppSelector((state: RootState) => state.auth);
@@ -54,7 +51,6 @@ const HomePage = () => {
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [showSaveDialog, setShowSaveDialog] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
-
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [editingImage, setEditingImage] = useState<ImageItem | null>(null);
 	const [editTitle, setEditTitle] = useState('');
@@ -63,6 +59,7 @@ const HomePage = () => {
 	const [isEditSaving, setIsEditSaving] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [isDownloading, setIsDownloading] = useState(false);
 	const navigate = useNavigate();
 
 	const sensors = useSensors(
@@ -151,7 +148,6 @@ const HomePage = () => {
 		setIsSaving(true);
 		try {
 			await saveImageOrder(filteredImages.map(img => ({ id: img.id, position: img.position })));
-
 			setHasUnsavedChanges(false);
 			setShowSaveDialog(false);
 		} catch (error) {
@@ -222,7 +218,6 @@ const HomePage = () => {
 			setEditImageFile(null);
 			setEditImagePreview('');
 			setSelectedImages(new Set());
-
 		} catch (error) {
 			console.error('Failed to save edit:', error);
 		} finally {
@@ -252,7 +247,42 @@ const HomePage = () => {
 		}
 	};
 
+	const handleDownloadImages = async () => {
+		setIsDownloading(true);
+		try {
+			const selectedImagesArray = Array.from(selectedImages);
+			const imagesToDownload = images.filter(img => selectedImagesArray.includes(img.id));
 
+			if (imagesToDownload.length === 1) {
+				const image = imagesToDownload[0];
+				const response = await fetch(image.url);
+				const blob = await response.blob();
+				const fileName = image.title || `image-${image.id}`;
+				saveAs(blob, `${fileName}.${image.url.split('.').pop()}`);
+			} else if (imagesToDownload.length > 1) {
+				const zip = new JSZip();
+				const folder = zip.folder("images");
+
+				const downloadPromises = imagesToDownload.map(async (image, index) => {
+					const response = await fetch(image.url);
+					const blob = await response.blob();
+					const fileName = image.title || `image-${index + 1}`;
+					folder?.file(`${fileName}.${image.url.split('.').pop()}`, blob);
+				});
+
+				await Promise.all(downloadPromises);
+				const content = await zip.generateAsync({ type: "blob" });
+				saveAs(content, "images.zip");
+			}
+
+			setSelectedImages(new Set());
+		} catch (error) {
+			console.error('Failed to download images:', error);
+			alert('Failed to download images. Please try again.');
+		} finally {
+			setIsDownloading(false);
+		}
+	};
 
 	const activeImage = filteredImages.find(image => image.id === activeId);
 
@@ -341,8 +371,8 @@ const HomePage = () => {
 							{searchTerm ? 'Try adjusting your search terms' : 'Upload your first image to get started'}
 						</p>
 						<Button
-						className="cursor-pointer"
-						onClick={() => navigate("/upload")}
+							className="cursor-pointer"
+							onClick={() => navigate("/upload")}
 						>
 							<Upload className="mr-2 h-4 w-4" />
 							Upload Images
@@ -415,9 +445,24 @@ const HomePage = () => {
 									{selectedImages.size} selected
 								</span>
 								<Separator orientation="vertical" className="h-6" />
-								<Button size="sm" variant="outline">
-									<Download className="mr-2 h-4 w-4" />
-									Download
+								<Button 
+									size="sm" 
+									variant="outline"
+									onClick={handleDownloadImages}
+									disabled={isDownloading}
+									className="cursor-pointer"
+								>
+									{isDownloading ? (
+										<>
+											<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent dark:border-white dark:border-t-transparent" />
+											Downloading...
+										</>
+									) : (
+										<>
+											<Download className="mr-2 h-4 w-4" />
+											Download
+										</>
+									)}
 								</Button>
 								{selectedImages.size === 1 && (
 									<Button size="sm" variant="outline" onClick={handleEditImages}>
