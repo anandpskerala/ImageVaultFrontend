@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthRedirect } from '@/routes/AuthRedirect';
 import { ProtectedRoute } from './ProtectedRoute';
+import { LoadingScreen } from '@/components/partials/LoadingScreen';
 
 const AppRoutes = () => {
     const { user } = useAppSelector((state: RootState) => state.auth);
@@ -16,7 +17,7 @@ const AppRoutes = () => {
     const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
     
     return (
-        <Suspense fallback={<span>Loading...</span>}>
+        <Suspense fallback={<LoadingScreen />}>
             <Routes>
                 <Route element={<AuthRedirect user={user}/>}>
                     <Route path='/login' element={<LoginPage />} />
