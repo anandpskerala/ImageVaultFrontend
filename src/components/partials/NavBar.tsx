@@ -69,12 +69,6 @@ export const NavBar: React.FC<NavbarProps> = ({
         setIsProfileMenuOpen(!isProfileMenuOpen);
     };
 
-    const handleNavClick = (href: string): void => {
-        console.log('Navigating to:', href);
-        setIsMobileMenuOpen(false);
-    };
-
-
     const logOut = () => {
         dispatch(logout());
     }
@@ -212,18 +206,12 @@ export const NavBar: React.FC<NavbarProps> = ({
                                         variant="ghost"
                                         className={`w-full justify-start px-3 py-3 ${item.isActive ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-600'
                                             }`}
-                                        onClick={() => handleNavClick(item.href)}
+                                        onClick={() => navigate(item.href)}
                                     >
                                         <item.icon className="w-5 h-5 mr-3" />
                                         {item.label}
                                     </Button>
                                 ))}
-                                <Button
-                                    className="w-full justify-start bg-slate-900 hover:bg-slate-800 text-white px-3 py-3 mt-3"
-                                >
-                                    <Upload className="w-5 h-5 mr-3" />
-                                    Upload Images
-                                </Button>
                             </div>
                         ) : (
                             <div className="space-y-2">
