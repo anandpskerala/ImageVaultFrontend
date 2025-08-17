@@ -44,6 +44,15 @@ const UploadPage = () => {
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement> | { target: { files: FileList } }) => {
 		const files = Array.from(e.target.files || []);
+		const maxImages = 10;
+		const currentFileCount = uploadFiles.length;
+		const remainingSlots = maxImages - currentFileCount;
+
+		if (files.length > remainingSlots) {
+			setError(`Cannot add ${files.length} images. Only ${remainingSlots} more image(s) can be uploaded (max ${maxImages}).`);
+			return;
+		}
+
 		const newFiles = files.map(file => ({
 			id: crypto.randomUUID(),
 			file,
@@ -231,7 +240,7 @@ const UploadPage = () => {
 									disabled={index === 0}
 									size="sm"
 									variant="ghost"
-									className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30"
+									className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 cursor-pointer"
 									title="Move up"
 								>
 									<ArrowUp className="h-3 w-3" />
@@ -241,7 +250,7 @@ const UploadPage = () => {
 									disabled={index === (isUploaded ? images.length : uploadFiles.length) - 1}
 									size="sm"
 									variant="ghost"
-									className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30"
+									className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 cursor-pointer"
 									title="Move down"
 								>
 									<ArrowDown className="h-3 w-3" />
@@ -250,14 +259,14 @@ const UploadPage = () => {
 							<Button
 								onClick={() => setPreviewImage({ ...image, url: URL.createObjectURL(image.file) })}
 								variant="ghost"
-								className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-300"
+								className="p-2 cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-300"
 							>
 								<Eye className="h-4 w-4" />
 							</Button>
 							<Button
 								onClick={() => removeUploadFile(index)}
 								variant="ghost"
-								className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-300"
+								className="p-2 cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-300"
 							>
 								<Trash2 className="h-4 w-4" />
 							</Button>
@@ -277,7 +286,6 @@ const UploadPage = () => {
 						<CardTitle className="text-lg sm:text-xl lg:text-2xl">Upload Images</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4 px-4 sm:px-6">
-						{/* Upload Drop Zone */}
 						<div
 							className={`border-2 border-dashed rounded-xl p-4 sm:p-8 lg:p-12 text-center transition-all duration-300 ${isDragOver ? 'border-blue-400 bg-blue-50 scale-[1.02] sm:scale-105 shadow-lg' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
 								}`}
@@ -289,6 +297,10 @@ const UploadPage = () => {
 							onDrop={(e) => {
 								e.preventDefault();
 								setIsDragOver(false);
+								if (uploadFiles.length >= 10) {
+									setError('Maximum of 10 images reached.');
+									return;
+								}
 								handleFileSelect({ target: { files: e.dataTransfer.files } });
 							}}
 						>
@@ -306,6 +318,7 @@ const UploadPage = () => {
 									accept="image/*"
 									onChange={handleFileSelect}
 									className="hidden"
+									disabled={uploadFiles.length >= 10}
 								/>
 								<Button
 									onClick={() => fileInputRef.current?.click()}
@@ -317,6 +330,17 @@ const UploadPage = () => {
 								</Button>
 							</div>
 						</div>
+
+						{success && (
+							<div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+								{success}
+							</div>
+						)}
+						{error && (
+							<div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+								{error}
+							</div>
+						)}
 
 						{uploadFiles.length > 0 && (
 							<div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8 border border-white/20 transition-all duration-300 ease-in-out">
@@ -345,13 +369,13 @@ const UploadPage = () => {
 									<Button
 										onClick={handleUpload}
 										disabled={loading}
-										className="w-full sm:w-1/2 text-sm sm:text-base py-2 sm:py-3"
+										className="w-full sm:w-1/2 text-sm sm:text-base py-2 sm:py-3 cursor-pointer"
 									>
 										{loading ? 'Uploading...' : 'Upload All Images'}
 									</Button>
 									<Button
 										onClick={() => setUploadFiles([])}
-										className="w-full sm:w-1/2 bg-red-600 text-white hover:bg-red-700 text-sm sm:text-base py-2 sm:py-3"
+										className="w-full sm:w-1/2 cursor-pointer bg-red-600 text-white hover:bg-red-700 text-sm sm:text-base py-2 sm:py-3"
 									>
 										Cancel
 									</Button>
@@ -383,16 +407,7 @@ const UploadPage = () => {
 							</div>
 						)}
 
-						{success && (
-							<div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-								{success}
-							</div>
-						)}
-						{error && (
-							<div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
-								{error}
-							</div>
-						)}
+						
 					</CardContent>
 				</Card>
 
@@ -403,7 +418,7 @@ const UploadPage = () => {
 								<h3 className="text-lg sm:text-xl font-semibold pr-4 truncate">{previewImage.title}</h3>
 								<button
 									onClick={() => setPreviewImage(null)}
-									className="p-2 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
+									className="p-2 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0 cursor-pointer"
 								>
 									<X className="h-5 w-5 sm:h-6 sm:w-6" />
 								</button>

@@ -35,6 +35,8 @@ import { SortableImageListItem } from '@/components/misc/SortableImageListItem';
 import { useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { AxiosError } from 'axios';
+import { toast } from 'sonner';
 
 const HomePage = () => {
 	const { user } = useAppSelector((state: RootState) => state.auth);
@@ -219,7 +221,8 @@ const HomePage = () => {
 			setEditImagePreview('');
 			setSelectedImages(new Set());
 		} catch (error) {
-			console.error('Failed to save edit:', error);
+			const err = error instanceof AxiosError ? error.response?.data.message: "Failed to Edit";
+			toast.error(err);
 		} finally {
 			setIsEditSaving(false);
 		}
@@ -465,7 +468,7 @@ const HomePage = () => {
 									)}
 								</Button>
 								{selectedImages.size === 1 && (
-									<Button size="sm" variant="outline" onClick={handleEditImages}>
+									<Button size="sm" variant="outline" onClick={handleEditImages} className="cursor-pointer">
 										<Edit3 className="mr-2 h-4 w-4" />
 										Edit
 									</Button>
@@ -482,6 +485,7 @@ const HomePage = () => {
 								<Button
 									size="sm"
 									variant="ghost"
+									className="cursor-pointer"
 									onClick={() => setSelectedImages(new Set())}
 								>
 									Clear
@@ -644,6 +648,7 @@ const HomePage = () => {
 									setEditImagePreview('');
 								}}
 								disabled={isEditSaving}
+								className="cursor-pointer"
 							>
 								<X className="mr-2 h-4 w-4" />
 								Cancel
@@ -651,7 +656,7 @@ const HomePage = () => {
 							<Button
 								onClick={handleSaveEdit}
 								disabled={isEditSaving || !editTitle.trim()}
-								className="bg-blue-600 hover:bg-blue-700 text-white"
+								className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
 							>
 								{isEditSaving ? (
 									<>
