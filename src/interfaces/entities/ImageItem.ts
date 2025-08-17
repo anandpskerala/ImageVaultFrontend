@@ -3,5 +3,5 @@ export interface ImageItem {
   title: string;
   url: string;
   file: File;
-  order: number;
+  position: number;
 }

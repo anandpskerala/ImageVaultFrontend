@@ -12,12 +12,17 @@ const AppRoutes = () => {
     const SignupPage = lazy(() => import("@/pages/SignupPage"));
     const UserProfilePage = lazy(() => import("@/pages/UserProfilePage"));
     const UploadPage = lazy(() => import("@/pages/UploadPage"));
+    const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
+    const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
+    
     return (
         <Suspense fallback={<span>Loading...</span>}>
             <Routes>
                 <Route element={<AuthRedirect user={user}/>}>
                     <Route path='/login' element={<LoginPage />} />
                     <Route path='/signup' element={<SignupPage />} />
+                    <Route path='/forgot-password' element={<ForgotPasswordPage />} />
+                    <Route path='/reset-password/:id' element={<ResetPasswordPage />} />
                 </Route>
 
                 <Route element={<ProtectedRoute user={user} />}>

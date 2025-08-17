@@ -172,13 +172,13 @@ export const NavBar: React.FC<NavbarProps> = ({
                                 <Button
                                     variant="ghost"
                                     onClick={() => navigate("/login")}
-                                    className="text-slate-600 hover:text-slate-900"
+                                    className="text-slate-600 hover:text-slate-900 cursor-pointer"
                                 >
                                     Sign in
                                 </Button>
                                 <Button
                                     onClick={() => navigate("/signup")}
-                                    className="bg-slate-900 hover:bg-slate-800 text-white px-6"
+                                    className="bg-slate-900 hover:bg-slate-800 text-white px-6 cursor-pointer"
                                 >
                                     Get Started
                                 </Button>

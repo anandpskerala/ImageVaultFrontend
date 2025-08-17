@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { User, Lock, Save, Eye, EyeOff, Phone, Mail, Calendar, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAppSelector, type RootState } from '@/store';
 import type { UserDTO } from '@/interfaces/entities/IUser';
@@ -13,6 +14,7 @@ import { NavBar } from '@/components/partials/NavBar';
 import { formatDate, getPasswordStrength } from '@/utils/stringUtils';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { changeUserDetails } from '@/store/actions/profile/changeDetails';
+import { Badge } from '@/components/ui/badge';
 
 
 const UserProfilePage = () => {
@@ -120,7 +122,7 @@ const UserProfilePage = () => {
                 newPassword: passwordForm.newPassword
             };
 
-            await dispatch(changeUserDetails({...profileForm, password: passwordData.password}))
+            await dispatch(changeUserDetails({ ...profileForm, password: passwordData.password }))
 
             setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
             showAlert('password', 'Password changed successfully!', 'success');
@@ -259,17 +261,33 @@ const UserProfilePage = () => {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="email" className="text-sm font-semibold text-gray-700">Email Address *</Label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                value={profileForm.email}
-                                                onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
-                                                className="w-full h-12 border-2 focus:border-blue-500 cursor-not-allowed"
-                                                placeholder="Enter your email address"
-                                                disabled={true}
-                                                readOnly={true}
-                                            />
+                                            <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                Email Address *
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="email"
+                                                    type="email"
+                                                    value={profileForm.email}
+                                                    onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
+                                                    className="w-full h-12 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/50 cursor-not-allowed rounded-lg"
+                                                    placeholder="Enter your email address"
+                                                    disabled
+                                                    readOnly
+                                                />
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Badge variant="outline" className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                                                                Read-only
+                                                            </Badge>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Contact support to change your email</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
                                         </div>
 
                                         <div className="space-y-2">
@@ -320,7 +338,7 @@ const UserProfilePage = () => {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-6">
-                                    {alerts.password.show && (
+                                    {/* {alerts.password.show && (
                                         <Alert className={`mb-6 border-l-4 ${alerts.password.type === 'error' ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'}`}>
                                             <div className="flex items-center gap-2">
                                                 {alerts.password.type === 'error' ?
@@ -331,6 +349,18 @@ const UserProfilePage = () => {
                                                     {alerts.password.message}
                                                 </AlertDescription>
                                             </div>
+                                        </Alert>
+                                    )} */}
+
+                                    {alerts.password.show && (
+                                        <Alert className={`mb-6 border ${alerts.password.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
+                                            {alerts.password.type === 'error' ?
+                                                <AlertCircle className="h-4 w-4 text-red-600" /> :
+                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                            }
+                                            <AlertDescription className={`${alerts.password.type === 'error' ? 'text-red-800' : 'text-green-800'} font-medium`}>
+                                                {alerts.password.message}
+                                            </AlertDescription>
                                         </Alert>
                                     )}
 

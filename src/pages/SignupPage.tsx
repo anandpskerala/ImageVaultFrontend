@@ -321,21 +321,21 @@ const SignupPage: React.FC = () => {
                                             </Button>
                                         </div>
                                         {formData.password && (
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-gray-600">Password Strength:</span>
-                                                        <span className={`font-medium ${passwordStrength.strength < 50 ? 'text-red-600' : passwordStrength.strength < 75 ? 'text-yellow-600' : 'text-green-600'}`}>
-                                                            {passwordStrength.text}
-                                                        </span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                                        <div
-                                                            className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                                                            style={{ width: `${passwordStrength.strength}%` }}
-                                                        ></div>
-                                                    </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-gray-600">Password Strength:</span>
+                                                    <span className={`font-medium ${passwordStrength.strength < 50 ? 'text-red-600' : passwordStrength.strength < 75 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                                        {passwordStrength.text}
+                                                    </span>
                                                 </div>
-                                            )}
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div
+                                                        className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                                                        style={{ width: `${passwordStrength.strength}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
                                         {errors.password && (
                                             <p className="text-sm text-red-600 font-medium">{errors.password}</p>
                                         )}

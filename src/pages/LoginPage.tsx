@@ -21,7 +21,7 @@ import {
 import type { LoginDataPayload } from '@/interfaces/entities/Payload';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { loginUser } from '@/store/actions/auth/loginUser';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { NavBar } from '@/components/partials/NavBar';
 import { useAppSelector, type RootState } from '@/store';
 
@@ -56,6 +56,7 @@ const LoginPage: React.FC = () => {
     const [submitError, setSubmitError] = useState<string>('');
     const dispatch = useAppDispatch();
     const {user} = useAppSelector((state: RootState) => state.auth);
+    const navigate = useNavigate();
 
     const validateField = async (field: FormField, value: string): Promise<void> => {
         try {
@@ -184,7 +185,7 @@ const LoginPage: React.FC = () => {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent cursor-pointer"
                                             onClick={togglePasswordVisibility}
                                             disabled={isLoading}
                                         >
@@ -218,8 +219,9 @@ const LoginPage: React.FC = () => {
                                     <Button
                                         variant="link"
                                         type="button"
-                                        className="px-0 text-sm text-slate-600 hover:text-slate-900"
+                                        className="px-0 text-sm text-slate-600 hover:text-slate-900 cursor-pointer"
                                         disabled={isLoading}
+                                        onClick={() => navigate("/forgot-password")}
                                     >
                                         Forgot password?
                                     </Button>
