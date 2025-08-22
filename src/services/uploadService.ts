@@ -1,3 +1,4 @@
+import type { PaginationParams } from "@/interfaces/props/PaginationParams";
 import axiosInstance from "@/utils/axiosInstance"
 
 export const uploadImages = async (formdata: FormData) => {
@@ -5,8 +6,8 @@ export const uploadImages = async (formdata: FormData) => {
     return res.data;
 }
 
-export const getImages = async () => {
-    const res = await axiosInstance.get("/upload/images");
+export const getImages = async (data: PaginationParams) => {
+    const res = await axiosInstance.get(`/upload/images?page=${data.page}&limit=${data.limit}&search=${data.search}`);
     return res.data;
 }
 

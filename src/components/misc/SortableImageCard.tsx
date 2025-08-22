@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, GripVertical, ImageIcon } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,13 @@ export const SortableImageCard = ({ image, selectedImages, toggleImageSelection,
                         loading="lazy"
                     />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className={`absolute top-2 left-2 z-10 ${selectedImages.has(image.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-300`}>
+                        <Checkbox
+                            checked={selectedImages.has(image.id)}
+                            onCheckedChange={() => toggleImageSelection(image.id)}
+                            className="h-5 w-5 cursor-pointer border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md checked:bg-blue-500 checked:border-blue-500 focus:ring-2 focus:ring-blue-300 focus:ring-offset-1 transition-colors duration-200"
+                        />
+                    </div>
                     <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <Button
                             size="sm"
@@ -74,19 +82,6 @@ export const SortableImageCard = ({ image, selectedImages, toggleImageSelection,
                         <div className="flex items-center gap-1">
                             <ImageIcon className="h-3 w-3" />
                             <span>Image</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 px-2 text-xs cursor-pointer"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleImageSelection(image.id);
-                                }}
-                            >
-                                {selectedImages.has(image.id) ? 'Unselect' : 'Select'}
-                            </Button>
                         </div>
                     </div>
                 </CardContent>

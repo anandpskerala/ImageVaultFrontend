@@ -3,7 +3,7 @@ import type { ImageItem } from '@/interfaces/entities/ImageItem';
 import { deleteImageService, editImageService, getImages, saveImageOrder } from '@/services/uploadService';
 import { useAppSelector, type RootState } from '@/store'
 import { useEffect, useState } from 'react';
-import { Search, Grid, List, Download, Trash2, Edit3, Upload, Image as ImageIcon, Save, X } from 'lucide-react';
+import { Search, Grid, List, Download, Trash2, Edit3, Upload, Image as ImageIcon, Save, X, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -37,17 +37,23 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { AxiosError } from 'axios';
 import { toast } from 'sonner';
+import type { PaginationParams } from '@/interfaces/props/PaginationParams';
+
+const ITEMS_PER_PAGE = 4;
 
 const HomePage = () => {
 	const { user } = useAppSelector((state: RootState) => state.auth);
 	const [images, setImages] = useState<ImageItem[]>([]);
 	const [total, setTotal] = useState<number>(0);
-	const [filteredImages, setFilteredImages] = useState<ImageItem[]>([]);
 	const [searchTerm, setSearchTerm] = useState('');
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
 	const [isLoading, setIsLoading] = useState(true);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [currentPage, setCurrentPage] = useState(1);
 	const [sortBy, setSortBy] = useState('position');
+	const [hasMorePages, setHasMorePages] = useState(false);
 	const [selectedImage, setSelectedImage] = useState<ImageItem | null>(null);
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -76,42 +82,77 @@ const HomePage = () => {
 	);
 
 	useEffect(() => {
-		const fetchRequest = async () => {
-			try {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 300);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+
+	const fetchImages = async (params: PaginationParams, append = false) => {
+		try {
+			if (!append) {
 				setIsLoading(true);
-				const res = await getImages();
-				const sortedImages = res.images.sort((a: ImageItem, b: ImageItem) => b.position - a.position);
-				setImages(sortedImages);
-				setFilteredImages(sortedImages);
-				setTotal(Number(res.total));
-			} catch (error) {
-				console.error(error);
-			} finally {
+			} else {
+				setIsLoadingMore(true);
+			}
+
+			const res = await getImages({
+				page: params.page,
+				limit: params.limit,
+				search: params.search,
+				sortBy: params.sortBy
+			});
+
+			if (append) {
+				setImages(prev => [...prev, ...res.images]);
+			} else {
+				setImages(res.images);
+			}
+
+			setTotal(Number(res.total));
+			setHasMorePages(res.images.length === params.limit && (params.page * params.limit) < Number(res.total));
+
+		} catch (error) {
+			console.error('Failed to fetch images:', error);
+			toast.error('Failed to load images');
+		} finally {
+			if (!append) {
 				setIsLoading(false);
+			} else {
+				setIsLoadingMore(false);
 			}
 		}
-		fetchRequest();
-	}, []);
+	};
 
 	useEffect(() => {
-		let filtered = images.filter(image =>
-			image.title.toLowerCase().includes(searchTerm.toLowerCase())
-		);
+		const params: PaginationParams = {
+			page: 1,
+			limit: ITEMS_PER_PAGE,
+			search: debouncedSearchTerm,
+			sortBy: sortBy
+		};
 
-		switch (sortBy) {
-			case 'title':
-				filtered = filtered.sort((a, b) => a.title.localeCompare(b.title));
-				break;
-			case 'recent':
-				filtered = filtered.sort((a, b) => b.position - a.position);
-				break;
-			case 'position':
-				filtered = filtered.sort((a, b) => a.position - b.position);
-				break;
-		}
+		fetchImages(params);
+		setCurrentPage(1);
+	}, [debouncedSearchTerm, sortBy]);
 
-		setFilteredImages(filtered);
-	}, [searchTerm, images, sortBy]);
+
+	const handleLoadMore = async () => {
+		if (!hasMorePages || isLoadingMore) return;
+
+		const nextPage = currentPage + 1;
+		const params: PaginationParams = {
+			page: nextPage,
+			limit: ITEMS_PER_PAGE,
+			search: debouncedSearchTerm,
+			sortBy: sortBy
+		};
+
+		await fetchImages(params, true);
+		setCurrentPage(nextPage);
+	};
 
 	const handleDragStart = (event: DragStartEvent) => {
 		setActiveId(event.active.id as string);
@@ -121,27 +162,18 @@ const HomePage = () => {
 		const { active, over } = event;
 		setActiveId(null);
 
-		if (active.id !== over?.id) {
-			const oldIndex = filteredImages.findIndex(item => item.id === active.id);
-			const newIndex = filteredImages.findIndex(item => item.id === over?.id);
+		if (active.id !== over?.id && sortBy === 'position') {
+			const oldIndex = images.findIndex(item => item.id === active.id);
+			const newIndex = images.findIndex(item => item.id === over?.id);
 
-			const newFilteredImages = arrayMove(filteredImages, oldIndex, newIndex);
-			const newImages = [...images];
+			const newImages = arrayMove(images, oldIndex, newIndex);
 
-			const updatedImages = newFilteredImages.map((img, index) => ({
+			const updatedImages = newImages.map((img, index) => ({
 				...img,
 				position: index + 1
 			}));
 
-			updatedImages.forEach(updatedImg => {
-				const mainIndex = newImages.findIndex(img => img.id === updatedImg.id);
-				if (mainIndex !== -1) {
-					newImages[mainIndex] = updatedImg;
-				}
-			});
-
-			setFilteredImages(updatedImages);
-			setImages(newImages);
+			setImages(updatedImages);
 			setHasUnsavedChanges(true);
 		}
 	};
@@ -149,11 +181,13 @@ const HomePage = () => {
 	const handleSaveOrder = async () => {
 		setIsSaving(true);
 		try {
-			await saveImageOrder(filteredImages.map(img => ({ id: img.id, position: img.position })));
+			await saveImageOrder(images.map(img => ({ id: img.id, position: img.position })));
 			setHasUnsavedChanges(false);
 			setShowSaveDialog(false);
+			toast.success('Order saved successfully');
 		} catch (error) {
 			console.error('Failed to save order:', error);
+			toast.error('Failed to save order');
 		} finally {
 			setIsSaving(false);
 		}
@@ -207,6 +241,7 @@ const HomePage = () => {
 			}
 
 			await editImageService(editingImage.id, formData);
+
 			const updatedImages = images.map(img =>
 				img.id === editingImage.id
 					? { ...img, title: editTitle, url: editImagePreview }
@@ -220,8 +255,9 @@ const HomePage = () => {
 			setEditImageFile(null);
 			setEditImagePreview('');
 			setSelectedImages(new Set());
+			toast.success('Image updated successfully');
 		} catch (error) {
-			const err = error instanceof AxiosError ? error.response?.data.message: "Failed to Edit";
+			const err = error instanceof AxiosError ? error.response?.data.message : "Failed to Edit";
 			toast.error(err);
 		} finally {
 			setIsEditSaving(false);
@@ -238,13 +274,18 @@ const HomePage = () => {
 
 			const updatedImages = images.filter(img => !selectedImages.has(img.id));
 			setImages(updatedImages);
-			setFilteredImages(updatedImages);
 			setTotal(prev => prev - selectedImages.size);
 			setSelectedImages(new Set());
 			setShowDeleteDialog(false);
+
+			if (updatedImages.length < ITEMS_PER_PAGE / 2 && hasMorePages) {
+				handleLoadMore();
+			}
+
+			toast.success(`${selectedImages.size} image${selectedImages.size > 1 ? 's' : ''} deleted successfully`);
 		} catch (error) {
 			console.error('Failed to delete images:', error);
-			alert('Failed to delete images. Please try again.');
+			toast.error('Failed to delete images. Please try again.');
 		} finally {
 			setIsDeleting(false);
 		}
@@ -269,25 +310,29 @@ const HomePage = () => {
 				const downloadPromises = imagesToDownload.map(async (image, index) => {
 					const response = await fetch(image.url);
 					const blob = await response.blob();
-					const fileName = image.title || `image-${index + 1}`;
-					folder?.file(`${fileName}.${image.url.split('.').pop()}`, blob);
+
+					const ext = image.url.split('.').pop()?.split('?')[0] || "jpg";
+					const fileName = image.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || `image-${index + 1}`;
+
+					folder?.file(`${fileName}.${ext}`, blob);
 				});
 
 				await Promise.all(downloadPromises);
-				const content = await zip.generateAsync({ type: "blob" });
+				const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 				saveAs(content, "images.zip");
 			}
 
 			setSelectedImages(new Set());
+			toast.success('Images downloaded successfully');
 		} catch (error) {
 			console.error('Failed to download images:', error);
-			alert('Failed to download images. Please try again.');
+			toast.error('Failed to download images. Please try again.');
 		} finally {
 			setIsDownloading(false);
 		}
 	};
 
-	const activeImage = filteredImages.find(image => image.id === activeId);
+	const activeImage = images.find(image => image.id === activeId);
 
 	return (
 		<div className="flex flex-col w-full min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -307,6 +352,9 @@ const HomePage = () => {
 						<div className="flex items-center gap-4">
 							<p className="text-muted-foreground">
 								Total assets: {total}
+							</p>
+							<p className="text-sm text-muted-foreground">
+								Showing {images.length} of {total}
 							</p>
 							{hasUnsavedChanges && (
 								<Button
@@ -366,7 +414,7 @@ const HomePage = () => {
 
 				{isLoading ? (
 					<LoadingSkeleton />
-				) : filteredImages.length === 0 ? (
+				) : images.length === 0 ? (
 					<div className="text-center py-12">
 						<ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
 						<h3 className="text-lg font-semibold mb-2">No images found</h3>
@@ -382,62 +430,88 @@ const HomePage = () => {
 						</Button>
 					</div>
 				) : (
-					<DndContext
-						sensors={sensors}
-						collisionDetection={closestCenter}
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-					>
-						<SortableContext
-							items={filteredImages.map(img => img.id)}
-							strategy={viewMode === 'grid' ? rectSortingStrategy : verticalListSortingStrategy}
+					<>
+						<DndContext
+							sensors={sensors}
+							collisionDetection={closestCenter}
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
 						>
-							{viewMode === 'grid' ? (
-								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-									{filteredImages.map((image) => (
-										<SortableImageCard
-											key={image.id}
-											image={image}
-											selectedImages={selectedImages}
-											toggleImageSelection={toggleImageSelection}
-											setSelectedImage={setSelectedImage}
-										/>
-									))}
-								</div>
-							) : (
-								<div className="space-y-4">
-									{filteredImages.map((image) => (
-										<SortableImageListItem
-											key={image.id}
-											image={image}
-											setSelectedImage={setSelectedImage}
-										/>
-									))}
-								</div>
-							)}
-						</SortableContext>
+							<SortableContext
+								items={images.map(img => img.id)}
+								strategy={viewMode === 'grid' ? rectSortingStrategy : verticalListSortingStrategy}
+							>
+								{viewMode === 'grid' ? (
+									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+										{images.map((image) => (
+											<SortableImageCard
+												key={image.id}
+												image={image}
+												selectedImages={selectedImages}
+												toggleImageSelection={toggleImageSelection}
+												setSelectedImage={setSelectedImage}
+											/>
+										))}
+									</div>
+								) : (
+									<div className="space-y-4">
+										{images.map((image) => (
+											<SortableImageListItem
+												key={image.id}
+												image={image}
+												setSelectedImage={setSelectedImage}
+											/>
+										))}
+									</div>
+								)}
+							</SortableContext>
 
-						<DragOverlay>
-							{activeImage ? (
-								<div className="opacity-80 transform rotate-3 scale-105">
-									{viewMode === 'grid' ? (
-										<SortableImageCard
-											image={activeImage}
-											selectedImages={selectedImages}
-											toggleImageSelection={toggleImageSelection}
-											setSelectedImage={setSelectedImage}
-											isDragging={true}
-										/>
+							<DragOverlay>
+								{activeImage ? (
+									<div className="opacity-80 transform rotate-3 scale-105">
+										{viewMode === 'grid' ? (
+											<SortableImageCard
+												image={activeImage}
+												selectedImages={selectedImages}
+												toggleImageSelection={toggleImageSelection}
+												setSelectedImage={setSelectedImage}
+												isDragging={true}
+											/>
+										) : (
+											<SortableImageListItem
+												image={activeImage}
+												setSelectedImage={setSelectedImage}
+											/>
+										)}
+									</div>
+								) : null}
+							</DragOverlay>
+						</DndContext>
+
+						{/* Load More Button */}
+						{hasMorePages && (
+							<div className="flex justify-center mt-8">
+								<Button
+									onClick={handleLoadMore}
+									disabled={isLoadingMore}
+									className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-8 py-3 rounded-lg shadow-sm"
+									size="lg"
+								>
+									{isLoadingMore ? (
+										<>
+											<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+											Loading...
+										</>
 									) : (
-										<SortableImageListItem
-											image={activeImage}
-											setSelectedImage={setSelectedImage}
-										/>
+										<>
+											<ChevronDown className="mr-2 h-4 w-4" />
+											Load More Images ({total - images.length} remaining)
+										</>
 									)}
-								</div>
-							) : null}
-						</DragOverlay>
-					</DndContext>
+								</Button>
+							</div>
+						)}
+					</>
 				)}
 
 				{selectedImages.size > 0 && (
@@ -448,8 +522,8 @@ const HomePage = () => {
 									{selectedImages.size} selected
 								</span>
 								<Separator orientation="vertical" className="h-6" />
-								<Button 
-									size="sm" 
+								<Button
+									size="sm"
 									variant="outline"
 									onClick={handleDownloadImages}
 									disabled={isDownloading}
